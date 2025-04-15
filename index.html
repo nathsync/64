@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>QR Base64 Decoder</title>
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f4f4f9;
+      color: #333;
+    }
+    textarea, button {
+      width: 100%;
+      font-size: 1rem;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 140px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      margin: 0.5rem 0;
+    }
+    button {
+      padding: 10px;
+      margin: 0.3rem 0;
+      background: #007BFF;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #outputContainer {
+      display: none;
+      background: #e9ecef;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 6px;
+      position: relative;
+    }
+    #copyBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #28a745;
+      font-size: 0.9rem;
+      padding: 6px 10px;
+    }
+    #qr-reader {
+      width: 100%;
+      margin-top: 1rem;
+    }
+    #previewImage {
+      display: none;
+      margin-top: 1rem;
+      max-width: 100%;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+  <h1>QR Base64 Decoder (Nested 5x)</h1>
+
+  <div>
+    <button onclick="pasteFromClipboard()">📋 Paste</button>
+    <button onclick="decodeBase64()">🔓 Decode</button>
+    <button onclick="startCameraScan()">📷 Scan Kamera</button>
+    <button onclick="scanFromFile()">🖼️ Scan Gambar</button>
+  </div>
+
+  <textarea id="input" placeholder="Masukkan teks QR di sini..."></textarea>
+
+  <div id="outputContainer">
+    <button id="copyBtn" onclick="copyToClipboard()">📄 Copy</button>
+    <div id="output"></div>
+  </div>
+
+  <div id="qr-reader"></div>
+  <img id="previewImage" loading="lazy" alt="Preview" />
+
+  <script>
+    const output = document.getElementById("output");
+    const outputContainer = document.getElementById("outputContainer");
+
+    function decodeBase64() {
+      let input = document.getElementById("input").value.trim();
+      try {
+        for (let i = 0; i < 5; i++) input = atob(input);
+        showOutput(input);
+      } catch (e) {
+        showOutput("❌ Error decoding: " + e.message, true);
+      }
+    }
+
+    function showOutput(text, isError = false) {
+      output.innerHTML = /^https?:\/\/[^\s]+$/.test(text)
+        ? `<a href="${text}" target="_blank" style="color:blue;text-decoration:underline;">${text}</a>`
+        : text;
+      output.style.color = isError ? "red" : "black";
+      outputContainer.style.display = "block";
+    }
+
+    function copyToClipboard() {
+      navigator.clipboard.writeText(output.innerText);
+    }
+
+    function pasteFromClipboard() {
+      navigator.clipboard.readText().then(text => {
+        document.getElementById("input").value = text;
+      });
+    }
+
+    async function startCameraScan() {
+      const qrReader = document.getElementById("qr-reader");
+      qrReader.innerHTML = "";
+
+      try {
+        const html5QrCode = new Html5Qrcode("qr-reader");
+        const devices = await Html5Qrcode.getCameras();
+        const camera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+        const boxSize = Math.floor(window.innerWidth * 0.8);
+
+        await html5QrCode.start(
+          camera.id,
+          { fps: 10, qrbox: { width: boxSize, height: boxSize } },
+          (decodedText) => {
+            html5QrCode.stop();
+            document.getElementById("input").value = decodedText;
+            decodeBase64();
+          }
+        );
+      } catch (err) {
+        showOutput("❌ Kamera tidak tersedia atau akses ditolak", true);
+      }
+    }
+
+    function scanFromFile() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.getElementById("previewImage");
+          img.src = e.target.result;
+          img.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+
+        const scanner = new Html5Qrcode("qr-reader");
+        scanner.scanFile(file, true)
+          .then(text => {
+            try {
+              for (let i = 0; i < 5; i++) text = atob(text);
+              showOutput(text);
+            } catch (e) {
+              showOutput("❌ Error decode hasil QR gambar: " + e.message, true);
+            }
+          })
+          .catch(() => showOutput("❌ Tidak menemukan QR dalam gambar", true));
+      };
+      input.click();
+    }
+  </script>
+</body>
+</html>
