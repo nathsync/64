@@ -48,7 +48,6 @@
       word-wrap: break-word;
       margin-bottom: 0.5rem;
     }
-    
     #copyBtn {
       font-size: 0.9rem;
       padding: 6px 12px;
@@ -61,17 +60,9 @@
     #copyBtn:hover {
       background-color: #218838;
     }
-
     #qr-reader {
       width: 100%;
       margin-top: 1rem;
-    }
-    #previewImage {
-      display: none;
-      margin-top: 1rem;
-      max-width: 100%;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
   </style>
 </head>
@@ -87,14 +78,13 @@
 
   <textarea id="input" placeholder="Masukkan teks QR di sini..."></textarea>
 
-  <div id="outputContainer">
+  <div id="outputContainer" style="display: none;">
     <div id="output"></div>
     <hr>
     <button id="copyBtn" onclick="copyToClipboard()">📄 Copy</button>
   </div>
 
   <div id="qr-reader"></div>
-  <img id="previewImage" loading="lazy" alt="Preview" />
 
   <script>
     const output = document.getElementById("output");
@@ -159,14 +149,6 @@
       input.onchange = () => {
         const file = input.files[0];
         if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = e => {
-          const img = document.getElementById("previewImage");
-          img.src = e.target.result;
-          img.style.display = "block";
-        };
-        reader.readAsDataURL(file);
 
         const scanner = new Html5Qrcode("qr-reader");
         scanner.scanFile(file, true)
